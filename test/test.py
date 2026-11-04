@@ -6,7 +6,7 @@ import re
 import csv
 from pathlib import Path
 import pandas as pd
-from tqdm import tqdm
+# from tqdm import tqdm
 import argparse
 
 turn_omp = True
@@ -448,7 +448,8 @@ def run_compressor(shape, data_type, data_path, compressor):
             error_mode = 'ABS'
             if compressor == 'SPERR' or compressor == 'ZFP' and compressor != "SLEEK":
                 error_mode = 'ABS'
-            for e in tqdm(errors):
+            # for e in tqdm(errors):
+            for e in errors:
                 if error_mode == 'ABS' and compressor != "SLEEK" and compressor != "tthresh":
                     e = float(e) * compute_range(input_file, ddtype)
                 if compressor.find("SZ3") != -1 or compressor.find("Falcons") != -1:    
