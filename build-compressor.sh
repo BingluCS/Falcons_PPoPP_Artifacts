@@ -43,7 +43,7 @@ get_cpu_flag() {
     esac
 }
 
-CPU_ARCH = -DENABLE_AVX2=ON
+CPU_FLAG="-DENABLE_AVX2=ON"
 
 build_PFPL() {
     echo "installing PFPL..."

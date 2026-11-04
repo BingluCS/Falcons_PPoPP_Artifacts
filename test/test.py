@@ -10,7 +10,7 @@ from tqdm import tqdm
 import argparse
 
 turn_omp = True
-omp_nums = [1,2,4,8,16,32,64]
+omp_nums = [1,32]
 datasets_name = "NYX"
 def append_row(csv_file, row):
     with open(csv_file, "a", newline="") as f:  # "a" = append
@@ -71,32 +71,6 @@ def run_zfp(shape, data_type, input_file, e, mode = 'REL', nums = 1):
     result = subprocess.run(cmd, check=True, capture_output=True, text=True)
     return compressed_file, decompressed_file, result
 
-def run_sz3(shape, data_type, input_file, e, mode = 'REL', nums = 1):
-    # shape_str = 'x'.join(map(str, shape))
-    data_type_para = 'f32'
-    if(data_type == "float"):
-        data_type_para = "-f"
-    else:
-        data_type_para = "-d"
-    compressed_file = input_file + ".sz"
-    decompressed_file = input_file + ".sz.out"
-    os.environ["OMP_NUM_THREADS"] =  str(nums)
-    config = ['-c', 'sz3config']
-    if nums == 1:
-        config = []
-    cmd = [
-        "../SZ3/build/bin/sz3", data_type_para,
-        "-i", input_file,
-        "-z", compressed_file,
-        "-o", decompressed_file, 
-        "-M", mode, str(e),
-        "-a", 
-        '-' + str(len(shape)), *[str(s) for s in (shape)]
-    ] + config
-    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-    # print(cmd)
-    return compressed_file, decompressed_file, result
-
 
 def run_sz3_para(cmp, shape, data_type, input_file, e, mode = 'REL', nums = 1):
     # shape_str = 'x'.join(map(str, shape))
@@ -125,7 +99,7 @@ def run_sz3_para(cmp, shape, data_type, input_file, e, mode = 'REL', nums = 1):
     # print(cmd)
     return compressed_file, decompressed_file, result
 
-def run_szo_para(cmp, shape, data_type, input_file, e, mode = 'REL', nums = 1):
+def run_falcons_para(cmp, shape, data_type, input_file, e, mode = 'REL', nums = 1):
     # shape_str = 'x'.join(map(str, shape))
     data_type_para = 'f32'
     if(data_type == "float"):
@@ -137,7 +111,8 @@ def run_szo_para(cmp, shape, data_type, input_file, e, mode = 'REL', nums = 1):
     os.environ["OMP_NUM_THREADS"] =  str(nums)
     os.environ["OMP_PROC_BIND"] = "close"
     cpus = f"0-{nums-1}" 
-    cmp_dir = f"../{cmp}/build/bin/szo"
+    cmp_dir = f"../{cmp}/build/bin/falcons"
+    enable_pa = [] if nums == 1 else ["-P"]
     cmd = [
         "taskset", "-c", cpus,
         cmp_dir, data_type_para,
@@ -147,7 +122,7 @@ def run_szo_para(cmp, shape, data_type, input_file, e, mode = 'REL', nums = 1):
         "-M", mode, str(e),
         "-a",
         '-' + str(len(shape)), *[str(s) for s in (shape)]
-    ] 
+    ] + enable_pa
     result = subprocess.run(cmd, check=True, capture_output=True, text=True)
     # print(cmd)
     return compressed_file, decompressed_file, result
@@ -393,7 +368,7 @@ def run_compressor(shape, data_type, data_path, compressor):
     global datasets_name
     ddtype = np.float64 if data_type == "double" else np.float32
     #errors = ['1E-1', '1E-2','1E-3', '1E-4', '1E-5', '1E-6', '1E-7', '1E-8'] if data_type == "double" else ['1E-1', '1E-2','1E-3', '1E-4', '1E-5']
-    errors = ['1E-2','1E-3', '1E-4']
+    errors = ['1E-2', '1E-3',  '1E-4', ]
     byte_num = 8 if data_type == "double" else 4
     directory = Path(data_path)
     target_files = [str(p) for p in directory.iterdir() if p.suffix in (".f32", ".d64")]
@@ -474,15 +449,11 @@ def run_compressor(shape, data_type, data_path, compressor):
             for e in tqdm(errors):
                 if error_mode == 'ABS' and compressor != "SLEEK" and compressor != "tthresh":
                     e = float(e) * compute_range(input_file, ddtype)
-                if compressor.find("SZ3") != -1 or compressor.find("SZo") != -1:    
-                    if compressor == "SZ3.3" :
-                        compressed_file, decompressed_file, result = run_sz3(shape, data_type, input_file,  e, error_mode, nums)
-                    elif compressor == "SZ3":
-                        compressed_file, decompressed_file, result = run_sz3(shape, data_type, input_file,  e, error_mode, nums)
-                    elif compressor == "SZo":
-                        compressed_file, decompressed_file, result = run_szo_para("SZo", shape, data_type, input_file,  e, error_mode, nums)
+                if compressor.find("SZ3") != -1 or compressor.find("Falcons") != -1:    
+                    if compressor.find("Falcons") != -1:
+                        compressed_file, decompressed_file, result = run_falcons_para(compressor, shape, data_type, input_file,  e, error_mode, nums)
                     else :
-                        compressed_file, decompressed_file, result = run_sz3(shape, data_type, input_file,  e, error_mode, nums)
+                        compressed_file, decompressed_file, result = run_sz3_para("SZ3", shape, data_type, input_file,  e, error_mode, nums)
                     
                     ratio = re.search(r"compression ratio =\s*([0-9.+Ee-]+)", result.stdout).group(1)
                     dec_th = float(re.search(r"decompression time =.*?(\d+\.\d+)", result.stdout).group(1))
@@ -717,10 +688,9 @@ def run_compressor(shape, data_type, data_path, compressor):
 def test_compressor(shape, data_type, data_path):
     run_compressor(shape, data_type, data_path, 'ZFP')
     run_compressor(shape, data_type, data_path, 'PFPL')
-    run_compressor(shape, data_type, data_path, 'SZo')
+    run_compressor(shape, data_type, data_path, 'Falcons')
     run_compressor(shape, data_type, data_path, 'SZ3.3')
     run_compressor(shape, data_type, data_path, 'SPERR')
-    run_compressor(shape, data_type, data_path, 'MGARD-X')
 
 if __name__ == "__main__":
     
