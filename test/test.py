@@ -85,16 +85,18 @@ def run_sz3_para(cmp, shape, data_type, input_file, e, mode = 'REL', nums = 1):
     os.environ["OMP_PROC_BIND"] = "close"
     cpus = f"0-{nums-1}" 
     cmp_dir = f"../{cmp}/build/bin/sz3"
+    config = ['-c', 'sz3config']
+    if nums == 1:
+        config = []
     cmd = [
-        "taskset", "-c", cpus,
-        cmp_dir, data_type_para,
+        "../SZ3/build/bin/sz3", data_type_para,
         "-i", input_file,
         "-z", compressed_file,
         "-o", decompressed_file, 
         "-M", mode, str(e),
-        "-a",
+        "-a", 
         '-' + str(len(shape)), *[str(s) for s in (shape)]
-    ] 
+    ] + config
     result = subprocess.run(cmd, check=True, capture_output=True, text=True)
     # print(cmd)
     return compressed_file, decompressed_file, result
