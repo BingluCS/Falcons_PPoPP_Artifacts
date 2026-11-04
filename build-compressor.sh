@@ -9,13 +9,12 @@ if [ ! -z "$2" ]; then
     CPU_ARCH="$2"
 fi
 
-
 get_cpu_flag() {
     local lib="$1"
     local arch="$2"
 
     case "$lib" in
-        SZo)
+        Falcons|falcons)
             case "$arch" in
                 AVX2|avx2)
                     echo "-DENABLE_AVX2=ON"
@@ -44,6 +43,8 @@ get_cpu_flag() {
     esac
 }
 
+CPU_ARCH = -DENABLE_AVX2=ON
+
 build_PFPL() {
     echo "installing PFPL..."
     cd PFPL
@@ -68,12 +69,12 @@ build_SZ3() {
     cd ../..
 }
 
-build_SZo() {
-    echo "installing SZo..."
-    cd SZo
+build_Falcons() {
+    echo "installing Falcons..."
+    cd Falcons
     mkdir build
     cd build
-    CPU_FLAG=$(get_cpu_flag "SZo" "$CPU_ARCH")
+    # CPU_FLAG=$(get_cpu_flag "Falcons" "$CPU_ARCH")
     cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$(pwd) $CPU_FLAG #-DENABLE_AVX2=ON
     make install -j
     cd ../..
@@ -84,7 +85,7 @@ build_SPERR() {
     cd SPERR
     mkdir build
     cd build
-    CPU_FLAG=$(get_cpu_flag "SPERR" "$CPU_ARCH")
+    # CPU_FLAG=$(get_cpu_flag "SPERR" "$CPU_ARCH")
     cmake ..  -DUSE_OMP=ON  $CPU_FLAG #-DENABLE_AVX2=ON
     make -j
     cd ../..
@@ -113,8 +114,8 @@ case "$TARGET" in
     SZ3)
 	build_SZ3
 	;;
-    SZo)
-	build_SZo
+    Falcons|falcons)
+	build_Falcons
 	;;
     SPERR)
 	build_SPERR
@@ -126,12 +127,12 @@ case "$TARGET" in
         build_PFPL
         build_zfp
         build_SZ3
-        build_SZo
+        build_Falcons
         build_SPERR
-        build_mgard
+        # build_mgard
         ;;
     *)
-        echo "Usage: $0 {PFPL|pfpl|zfp|ZFP|SZ3|SZo|SPERR|MGARD|all}"
+        echo "Usage: $0 {PFPL|pfpl|zfp|ZFP|SZ3|Falcons|falcons|SPERR|all}"
 #        exit 1
         ;;
 esac
