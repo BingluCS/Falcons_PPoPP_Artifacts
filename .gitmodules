@@ -7,12 +7,9 @@
 [submodule "SPERR"]
 	path = SPERR
 	url = https://github.com/BingluCS/SPERR.git
-[submodule "MGARD"]
-	path = MGARD
-	url = https://github.com/CODARcode/MGARD.git
 [submodule "zfp"]
 	path = zfp
 	url = https://github.com/BingluCS/zfp.git
-[submodule "SZo"]
-	path = SZo
-	url = https://github.com/BingluCS/SZo.git
+[submodule "Falcons"]
+	path = Falcons
+	url = https://github.com/opensdc-org/Falcons.git
